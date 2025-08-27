@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Game Tebak Gambar</title>
+  <style>
+    :root{
+      --bg:#f7fbff;
+      --card:#ffffff;
+      --accent:#2463ff;
+      --good:#1aa55b;
+      --bad:#e04b4b;
+      --muted:#666;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,Arial,Helvetica,sans-serif}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#e9f0ff 0%,var(--bg) 100%);
+      padding:20px;
+    }
+    .app{
+      width:100%;
+      max-width:520px;
+      background:var(--card);
+      border-radius:16px;
+      box-shadow:0 8px 30px rgba(20,40,80,0.08);
+      padding:18px;
+    }
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    h1{font-size:18px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .chip{padding:6px 10px;border-radius:999px;background:#f1f6ff;color:var(--accent);font-weight:600;font-size:13px}
+    .board{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 8px}
+    .image{
+      width:220px;height:220px;border-radius:12px;background:#fff;display:flex;
+      align-items:center;justify-content:center;font-size:120px;box-shadow:0 6px 18px rgba(20,40,80,0.06);
+    }
+    .meta{display:flex;gap:12px;justify-content:space-between;width:100%}
+    .stat{background:#f8f9ff;padding:8px 10px;border-radius:10px;flex:1;text-align:center}
+    .stat small{display:block;color:var(--muted);font-size:12px}
+    .timer{font-size:20px;font-weight:700;color:var(--accent)}
+    .form{display:flex;gap:8px;width:100%;margin-top:6px}
+    input[type="text"]{
+      flex:1;padding:10px;border-radius:10px;border:1px solid #e6e9f3;font-size:16px;
+    }
+    button{
+      padding:10px 12px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:700;
+      cursor:pointer;
+    }
+    .feedback{min-height:42px;text-align:center;font-weight:700}
+    .feedback.good{color:var(--good)}
+    .feedback.bad{color:var(--bad)}
+    .settings{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .settings label{font-size:14px;display:flex;gap:6px;align-items:center}
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .small{font-size:12px;color:var(--muted)}
+    .btn-ghost{background:transparent;border:1px solid #e6e9f3;color:var(--accent);padding:8px 10px;border-radius:8px}
+    @media (max-width:420px){
+      .image{width:170px;height:170px;font-size:92px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application">
+    <header>
+      <h1>🎯 Tebak Gambar</h1>
+      <div class="controls">
+        <div class="chip" id="modeChip">Mode: Manual</div>
+      </div>
+    </header>
+
+    <div class="settings" aria-hidden="false">
+      <label><input type="checkbox" id="cekBuah" checked> Buah</label>
+      <label><input type="checkbox" id="cekHewan" checked> Hewan</label>
+      <label><input type="checkbox" id="cekBenda" checked> Benda</label>
+
+      <label style="margin-left:auto">
+        Soal:
+        <select id="totalSelect">
+          <option value="5">5</option>
+          <option value="7" selected>7</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="board">
+      <div class="image" id="imageBox" aria-live="polite">🍎</div>
+
+      <div class="meta" aria-hidden="false">
+        <div class="stat">
+          <small>Level</small>
+          <div id="level">1</div>
+        </div>
+        <div class="stat">
+          <small>Skor</small>
+          <div id="score">0</div>
+        </div>
+        <div class="stat">
+          <small>Timer</small>
+          <div class="timer" id="timer">10s</div>
+        </div>
+      </div>
+
+      <div class="form" role="group" aria-label="Jawaban">
+        <input type="text" id="answer" placeholder="Ketik jawaban di sini (mis. apel)" autocomplete="off" />
+        <button id="submitBtn">Cek</button>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+
+      <footer>
+        <div class="small">Pilih kategori & jumlah soal lalu tekan <strong>Mulai</strong></div>
+        <div>
+          <button class="btn-ghost" id="startBtn">Mulai</button>
+          <button id="restartBtn">Ulang</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // Data emoji per kategori
+    const DATA = {
+      buah: {
+        "apel":"🍎","pisang":"🍌","jeruk":"🍊","semangka":"🍉",
+        "anggur":"🍇","nanas":"🍍","melon":"🍈","stroberi":"🍓"
+      },
+      hewan: {
+        "anjing":"🐶","kucing":"🐱","singa":"🦁","ikan":"🐟",
+        "gajah":"🐘","monyet":"🐒","burung":"🐦","ular":"🐍"
+      },
+      benda: {
+        "mobil":"🚗","motor":"🏍️","bola":"⚽","komputer":"💻",
+        "hp":"📱","buku":"📖","jam":"⌚","lampu":"💡"
+      }
+    };
+
+    // DOM
+    const imageBox = document.getElementById('imageBox');
+    const answerInput = document.getElementById('answer');
+    const submitBtn = document.getElementById('submitBtn');
+    const feedback = document.getElementById('feedback');
+    const levelEl = document.getElementById('level');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const totalSelect = document.getElementById('totalSelect');
+
+    // checkbox
+    const chkBuah = document.getElementById('cekBuah');
+    const chkHewan = document.getElementById('cekHewan');
+    const chkBenda = document.getElementById('cekBenda');
+
+    // state
+    let pool = [];
+    let current = null;
+    let score = 0;
+    let level = 1;
+    let totalLevels = parseInt(totalSelect.value);
+    let timeLeft = 10;
+    let timerId = null;
+    let playing = false;
+
+    function buildPool(){
+      pool = [];
+      if(chkBuah.checked) pool.push(...Object.entries(DATA.buah));
+      if(chkHewan.checked) pool.push(...Object.entries(DATA.hewan));
+      if(chkBenda.checked) pool.push(...Object.entries(DATA.benda));
+    }
+
+    function pickRandom(){
+      if(pool.length === 0) return null;
+      const r = Math.floor(Math.random() * pool.length);
+      return { key: pool[r][0], emoji: pool[r][1] };
+    }
+
+    function startGame(){
+      buildPool();
+      if(pool.length === 0){
+        alert('Pilih minimal 1 kategori!');
+        return;
+      }
+      score = 0;
+      level = 1;
+      totalLevels = parseInt(totalSelect.value);
+      playing = true;
+      document.getElementById('modeChip').textContent = 'Mode: Manual';
+      scoreEl.textContent = score;
+      levelEl.textContent = level + ' / ' + totalLevels;
+      feedback.textContent = '';
+      nextRound();
+    }
+
+    function nextRound(){
+      clearInterval(timerId);
+      answerInput.value = '';
+      answerInput.disabled = false;
+      submitBtn.disabled = false;
+
+      if(level > totalLevels){
+        endGame();
+        return;
+      }
+      current = pickRandom();
+      if(!current){ endGame(); return; }
+
+      imageBox.textContent = current.emoji;
+      levelEl.textContent = level + ' / ' + totalLevels;
+      timeLeft = 10;
+      timerEl.textContent = timeLeft + 's';
+      feedback.className = 'feedback';
+      timerId = setInterval(()=>{
+        timeLeft--;
+        timerEl.textContent = timeLeft + 's';
+        if(timeLeft <= 0){
+          clearInterval(timerId);
+          onTimeUp();
+        }
+      },1000);
+      answerInput.focus();
+    }
+
+    function onTimeUp(){
+      // waktu habis
+      score -= 5;
+      scoreEl.textContent = score;
+      feedback.textContent = '⏰ Waktu habis! Jawaban: ' + current.key;
+      feedback.className = 'feedback bad';
+      // lanjut
+      level++;
+      setTimeout(nextRound, 1400);
+    }
+
+    function submitAnswer(){
+      if(!playing) return;
+      clearInterval(timerId);
+      const answer = answerInput.value.trim().toLowerCase();
+      answerInput.disabled = true;
+      submitBtn.disabled = true;
+      if(answer === current.key){
+        score += 10;
+        scoreEl.textContent = score;
+        feedback.textContent = '✅ Benar!';
+        feedback.className = 'feedback good';
+      } else {
+        score -= 5;
+        scoreEl.textContent = score;
+        feedback.textContent = '❌ Salah! Jawaban: ' + current.key;
+        feedback.className = 'feedback bad';
+      }
+      level++;
+      setTimeout(nextRound, 1400);
+    }
+
+    function endGame(){
+      playing = false;
+      clearInterval(timerId);
+      imageBox.textContent = '🏁';
+      feedback.className = 'feedback';
+      feedback.textContent = `Permainan selesai — Total skor: ${score}`;
+      levelEl.textContent = totalLevels + ' / ' + totalLevels;
+    }
+
+    // events
+    submitBtn.addEventListener('click', submitAnswer);
+    answerInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter') submitAnswer();
+    });
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', ()=>{
+      clearInterval(timerId);
+      score = 0; level = 1; playing = false;
+      scoreEl.textContent = score;
+      levelEl.textContent = '0 / 0';
+      timerEl.textContent = '—';
+      imageBox.textContent = '🎯';
+      feedback.textContent = '';
+    });
+
+    // keep totalSelect in sync
+    totalSelect.addEventListener('change', ()=>{
+      totalLevels = parseInt(totalSelect.value);
+      if(playing) levelEl.textContent = level + ' / ' + totalLevels;
+    });
+
+    // start with idle state
+    imageBox.textContent = '🎯';
+    timerEl.textContent = '—';
+    levelEl.textContent = '0 / 0';
+    scoreEl.textContent = '0';
+  </script>
+</body>
+</html>
